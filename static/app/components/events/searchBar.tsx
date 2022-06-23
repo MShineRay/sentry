@@ -166,10 +166,15 @@ function SearchBar(props: SearchBarProps) {
 
     assign(combinedTags, tagsWithKind, fieldTags, semverTags);
 
+    const sortedTagKeys = Object.keys(combinedTags);
+    sortedTagKeys.sort((a, b) => {
+      return a.toLowerCase().localeCompare(b.toLowerCase());
+    });
+
     combinedTags.has = {
       key: 'has',
       name: 'Has property',
-      values: Object.keys(combinedTags),
+      values: sortedTagKeys,
       predefined: true,
       kind: FieldValueKind.FIELD,
     };
