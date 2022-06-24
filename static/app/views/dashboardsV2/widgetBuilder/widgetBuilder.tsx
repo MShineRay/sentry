@@ -272,7 +272,10 @@ function WidgetBuilder({
       loadOrganizationTags(api, organization.slug, selection);
     }
 
-    if (objectIsEmpty(customMeasurements)) {
+    if (
+      objectIsEmpty(customMeasurements) &&
+      organization.features.includes('dashboard-custom-measurement-widgets')
+    ) {
       // TODO: Need also refetch custom measurements when pageFilters change because list
       // can change based on project, env, and timeframe.
       loadCustomMeasurements(api, organization.slug, selection);

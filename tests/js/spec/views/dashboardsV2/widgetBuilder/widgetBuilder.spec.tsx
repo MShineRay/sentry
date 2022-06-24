@@ -23,6 +23,7 @@ const defaultOrgFeatures = [
   'new-widget-builder-experience-design',
   'dashboards-edit',
   'global-views',
+  'dashboard-custom-measurement-widgets',
 ];
 
 // Mocking worldMapChart to avoid act warnings
