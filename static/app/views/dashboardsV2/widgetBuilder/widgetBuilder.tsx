@@ -6,6 +6,7 @@ import isEmpty from 'lodash/isEmpty';
 import omit from 'lodash/omit';
 import set from 'lodash/set';
 
+import {loadCustomMeasurements} from 'sentry/actionCreators/customMeasurements';
 import {validateWidget} from 'sentry/actionCreators/dashboards';
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {fetchOrgMembers} from 'sentry/actionCreators/members';
@@ -41,7 +42,9 @@ import {
   QueryFieldValue,
 } from 'sentry/utils/discover/fields';
 import handleXhrErrorResponse from 'sentry/utils/handleXhrErrorResponse';
+import {MeasurementCollection} from 'sentry/utils/measurements/measurements';
 import useApi from 'sentry/utils/useApi';
+import withCustomMeasurements from 'sentry/utils/withCustomMeasurements';
 import withPageFilters from 'sentry/utils/withPageFilters';
 import withTags from 'sentry/utils/withTags';
 import {
@@ -110,6 +113,7 @@ interface QueryData {
 }
 
 interface Props extends RouteComponentProps<RouteParams, {}> {
+  customMeasurements: MeasurementCollection;
   dashboard: DashboardDetails;
   onSave: (widgets: Widget[]) => void;
   organization: Organization;
@@ -149,6 +153,7 @@ function WidgetBuilder({
   route,
   router,
   tags,
+  customMeasurements,
 }: Props) {
   const {widgetIndex, orgId, dashboardId} = params;
   const {source, displayType, defaultTitle, defaultTableColumns, limit} = location.query;
@@ -265,6 +270,12 @@ function WidgetBuilder({
 
     if (objectIsEmpty(tags)) {
       loadOrganizationTags(api, organization.slug, selection);
+    }
+
+    if (objectIsEmpty(customMeasurements)) {
+      // TODO: Need also refetch custom measurements when pageFilters change because list
+      // can change based on project, env, and timeframe.
+      loadCustomMeasurements(api, organization.slug, selection);
     }
 
     if (isEditing && isValidWidgetIndex) {
@@ -1058,6 +1069,7 @@ function WidgetBuilder({
                       handleColumnFieldChange={handleColumnFieldChange}
                       explodedFields={explodedFields}
                       tags={tags}
+                      customMeasurements={customMeasurements}
                       organization={organization}
                     />
                   )}
@@ -1153,7 +1165,7 @@ function WidgetBuilder({
   );
 }
 
-export default withPageFilters(withTags(WidgetBuilder));
+export default withPageFilters(withTags(withCustomMeasurements(WidgetBuilder)));
 
 const PageContentWithoutPadding = styled(PageContent)`
   padding: 0;
