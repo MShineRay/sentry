@@ -123,13 +123,11 @@ export function createSearchGroups(
 
   if (queryCharsLeft || queryCharsLeft === 0) {
     searchItems = searchItems.filter(
-      (value: SearchItem) =>
-        typeof value.value !== 'undefined' && value.value.length <= queryCharsLeft
+      (value: SearchItem) => !value.value || value.value.length <= queryCharsLeft
     );
     if (recentSearchItems) {
       recentSearchItems = recentSearchItems.filter(
-        (value: SearchItem) =>
-          typeof value.value !== 'undefined' && value.value.length <= queryCharsLeft
+        (value: SearchItem) => !value.value || value.value.length <= queryCharsLeft
       );
     }
   }

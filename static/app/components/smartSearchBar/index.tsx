@@ -665,12 +665,15 @@ class SmartSearchBar extends Component<Props, State> {
       const totalItems = flatSearchItems.length;
 
       // Move the selected index up/down
-      const nextActiveSearchItem =
-        key === 'ArrowUp'
-          ? (currIndex - 1 + totalItems) % totalItems
-          : isSelectingDropdownItems
-          ? (currIndex + 1) % totalItems
-          : 0;
+      let nextActiveSearchItem = currIndex;
+      do {
+        nextActiveSearchItem =
+          key === 'ArrowUp'
+            ? (nextActiveSearchItem - 1 + totalItems) % totalItems
+            : isSelectingDropdownItems
+            ? (nextActiveSearchItem + 1) % totalItems
+            : 0;
+      } while (flatSearchItems[nextActiveSearchItem].value === null);
 
       const [nextGroupIndex, nextChildrenIndex] = filterSearchGroupsByIndex(
         searchGroups,
@@ -879,7 +882,7 @@ class SmartSearchBar extends Component<Props, State> {
   /**
    * Returns array of possible key values that substring match `query`
    */
-  getTagGroups(query: string): [SearchItem[], ItemType] {
+  getTagItems(query: string): [SearchItem[], ItemType] {
     const {prepareQuery, supportedTagType, getFieldDoc} = this.props;
 
     const supportedTags = this.props.supportedTags ?? {};
@@ -898,7 +901,7 @@ class SmartSearchBar extends Component<Props, State> {
       tagKeys = tagKeys.filter(key => key !== 'environment');
     }
 
-    const accountedForSections = new Set<string>();
+    const groupsHandled = new Set<string>();
 
     const tagGroups = tagKeys
       .sort((a, b) => a.localeCompare(b))
@@ -908,38 +911,43 @@ class SmartSearchBar extends Component<Props, State> {
         const kind = supportedTags[key]?.kind;
         const documentation = getFieldDoc?.(key) || '-';
 
-        if (
-          sections.length > 1 &&
-          kind !== FieldValueKind.FUNCTION &&
-          arr.filter(k => k.startsWith(sections[0])).length > 1
-        ) {
-          const [title] = sections;
+        const item: SearchItem = {
+          value: keyWithColon,
+          title: key,
+          documentation,
+          kind,
+        };
 
-          const groupHasMoreThanOne =
-            arr.filter(k => k.startsWith(`${sections[0]}.`)).length > 1;
+        const [title] = sections;
+        const groupMemberCount = arr.filter(k => k.startsWith(title)).length;
 
-          const item: SearchItem = {
-            value: keyWithColon,
-            title: key,
-            documentation,
-            kind,
-            isGrouped: groupHasMoreThanOne,
-            isChild: accountedForSections.has(title),
-          };
+        if (kind !== FieldValueKind.FUNCTION && groupMemberCount > 1) {
+          item.isGrouped = true;
 
-          accountedForSections.add(title);
+          if (sections.length > 1) {
+            item.isChild = true;
 
-          return [item];
+            if (groupMemberCount > 1 && !groupsHandled.has(title)) {
+              // This will be the only group member, add a group header
+              groupsHandled.add(title);
+
+              return [
+                {
+                  value: null,
+                  title,
+                  documentation: '-',
+                  kind,
+                  isGrouped: true,
+                },
+                item,
+              ];
+            }
+          }
+
+          groupsHandled.add(title);
         }
 
-        return [
-          {
-            value: keyWithColon,
-            title: key,
-            documentation,
-            kind,
-          },
-        ];
+        return [item];
       });
 
     return [tagGroups, supportedTagType ?? ItemType.TAG_KEY];
@@ -1125,7 +1133,7 @@ class SmartSearchBar extends Component<Props, State> {
   };
 
   async generateTagAutocompleteGroup(tagName: string): Promise<AutocompleteGroup> {
-    const [tagKeys, tagType] = this.getTagGroups(tagName);
+    const [tagKeys, tagType] = this.getTagItems(tagName);
     const recentSearches = await this.getRecentSearches();
 
     return {
@@ -1206,23 +1214,22 @@ class SmartSearchBar extends Component<Props, State> {
   };
 
   showDefaultSearches = async () => {
-    const {query} = this.state;
     const [defaultSearchItems, defaultRecentItems] = this.props.defaultSearchItems!;
+
+    // Always clear searchTerm on showing default state.
+    this.setState({searchTerm: ''});
 
     if (!defaultSearchItems.length) {
       // Update searchTerm, otherwise <SearchDropdown> will have wrong state
       // (e.g. if you delete a query, the last letter will be highlighted if `searchTerm`
       // does not get updated)
-      this.setState({searchTerm: query});
 
-      const [tagKeys, tagType] = this.getTagGroups('');
+      const [tagKeys, tagType] = this.getTagItems('');
       const recentSearches = await this.getRecentSearches();
 
       this.updateAutoCompleteState(tagKeys, recentSearches ?? [], '', tagType);
       return;
     }
-    // cursor on whitespace show default "help" search terms
-    this.setState({searchTerm: ''});
 
     this.updateAutoCompleteState(
       defaultSearchItems,

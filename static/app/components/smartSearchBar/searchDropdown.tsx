@@ -33,19 +33,26 @@ class SearchDropdown extends PureComponent<Props> {
   };
 
   renderItemTitle = (item: SearchItem) => {
-    const fullWord = item.title ?? '';
+    if (!item.title) {
+      return null;
+    }
+
+    const fullWord = item.title;
 
     const words =
       item.kind !== FieldValueKind.FUNCTION ? fullWord.split('.') : [fullWord];
     const [firstWord, ...restWords] = words;
-    const hideFirstWord = item.isGrouped && item.isChild;
+    const isFirstWordHidden = item.isGrouped && item.isChild;
 
     const combinedRestWords = restWords.length > 0 ? restWords.join('.') : null;
 
     const searchSubstring = this.props.searchSubstring;
 
     if (searchSubstring) {
-      const idx = fullWord.toLowerCase().indexOf(searchSubstring);
+      const idx =
+        restWords.length === 0
+          ? fullWord.toLowerCase().indexOf(searchSubstring.split('.')[0])
+          : fullWord.toLowerCase().indexOf(searchSubstring);
 
       if (idx !== -1) {
         let renderedRest: React.ReactNode;
@@ -54,7 +61,10 @@ class SearchDropdown extends PureComponent<Props> {
           const descIdx = combinedRestWords.indexOf(remainingSubstr);
           if (descIdx > -1) {
             renderedRest = (
-              <RestOfWords hasSplit={words.length > 1}>
+              <RestOfWords
+                isFirstWordHidden={isFirstWordHidden}
+                hasSplit={words.length > 1}
+              >
                 .{combinedRestWords.slice(0, descIdx)}
                 <strong>
                   {combinedRestWords.slice(descIdx, remainingSubstr.length)}
@@ -68,38 +78,29 @@ class SearchDropdown extends PureComponent<Props> {
         }
 
         return (
-          <Fragment>
-            <FirstWordWrapper hide={hideFirstWord} aria-hidden={hideFirstWord}>
-              {firstWord.slice(0, idx)}
-              <strong>{firstWord.slice(idx, searchSubstring.length)}</strong>
-              {firstWord.slice(idx + searchSubstring.length)}
-            </FirstWordWrapper>
+          <SearchItemTitleWrapper>
+            {!isFirstWordHidden && (
+              <FirstWordWrapper>
+                {firstWord.slice(0, idx)}
+                <strong>{firstWord.slice(idx, searchSubstring.length)}</strong>
+                {firstWord.slice(idx + searchSubstring.length)}
+              </FirstWordWrapper>
+            )}
             {renderedRest}
-          </Fragment>
+          </SearchItemTitleWrapper>
         );
       }
-    } else if (item.type === ItemType.INVALID_TAG) {
-      return (
-        <Invalid>
-          {tct("The field [field] isn't supported here. ", {
-            field: <strong>{item.desc}</strong>,
-          })}
-          {tct('[highlight:See all searchable properties in the docs.]', {
-            highlight: <Highlight />,
-          })}
-        </Invalid>
-      );
     }
 
     return (
-      <Fragment>
-        <FirstWordWrapper hide={hideFirstWord} aria-hidden={hideFirstWord}>
-          {firstWord}
-        </FirstWordWrapper>
+      <SearchItemTitleWrapper>
+        {!isFirstWordHidden && <FirstWordWrapper>{firstWord}</FirstWordWrapper>}
         {combinedRestWords && (
-          <RestOfWords hasSplit={words.length > 1}>.{combinedRestWords}</RestOfWords>
+          <RestOfWords isFirstWordHidden={isFirstWordHidden} hasSplit={words.length > 1}>
+            .{combinedRestWords}
+          </RestOfWords>
         )}
-      </Fragment>
+      </SearchItemTitleWrapper>
     );
   };
 
@@ -132,30 +133,50 @@ class SearchDropdown extends PureComponent<Props> {
   };
 
   renderItem = (item: SearchItem) => {
+    const isDisabled = item.value === null;
+
+    let children: React.ReactNode;
+    if (item.type === ItemType.RECENT_SEARCH) {
+      children = this.renderQueryItem(item);
+    } else if (item.type === ItemType.INVALID_TAG) {
+      children = (
+        <Invalid>
+          {tct("The field [field] isn't supported here. ", {
+            field: <strong>{item.desc}</strong>,
+          })}
+          {tct('[highlight:See all searchable properties in the docs.]', {
+            highlight: <Highlight />,
+          })}
+        </Invalid>
+      );
+    } else {
+      children = (
+        <Fragment>
+          {this.renderItemTitle(item)}
+          {item.desc && <Value hasDocs={!!item.documentation}>{item.desc}</Value>}
+          <Documentation>{item.documentation}</Documentation>
+          <TagWrapper>
+            {item.kind && !item.isChild && this.renderKind(item.kind)}
+          </TagWrapper>
+        </Fragment>
+      );
+    }
+
     return (
       <SearchListItem
         key={item.value || item.desc || item.title}
         className={`${item.isChild ? 'group-child' : ''} ${item.active ? 'active' : ''}`}
         data-test-id="search-autocomplete-item"
-        onClick={item.callback ?? this.props.onClick.bind(this, item.value, item)}
+        onClick={
+          !isDisabled
+            ? item.callback ?? this.props.onClick.bind(this, item.value, item)
+            : undefined
+        }
         ref={element => item.active && element?.scrollIntoView?.({block: 'nearest'})}
         isGrouped={item.isGrouped}
-        isChild={item.isChild}
+        isDisabled={isDisabled}
       >
-        {item.type === ItemType.RECENT_SEARCH ? (
-          this.renderQueryItem(item)
-        ) : (
-          <Fragment>
-            <SearchItemTitleWrapper>
-              {this.renderItemTitle(item)}
-              {item.desc && <span>{item.desc}</span>}
-            </SearchItemTitleWrapper>
-            <Documentation>{item.documentation}</Documentation>
-            <TagWrapper>
-              {item.kind && !item.isChild && this.renderKind(item.kind)}
-            </TagWrapper>
-          </Fragment>
-        )}
+        {children}
       </SearchListItem>
     );
   };
@@ -322,18 +343,28 @@ const SearchItemsList = styled('ul')<{maxMenuHeight?: number}>`
   }}
 `;
 
-const SearchListItem = styled(ListItem)<{isChild?: boolean; isGrouped?: boolean}>`
+const SearchListItem = styled(ListItem)<{isDisabled?: boolean; isGrouped?: boolean}>`
   scroll-margin: 40px 0;
   font-size: ${p => p.theme.fontSizeLarge};
   padding: 4px ${space(2)};
 
   min-height: ${p => (p.isGrouped ? '30px' : '36px')};
-  cursor: pointer;
 
-  &:hover,
-  &.active {
-    background: ${p => p.theme.hover};
-  }
+  ${p => {
+    if (!p.isDisabled) {
+      return `
+        cursor: pointer;
+
+        &:hover,
+        &.active {
+          background: ${p.theme.hover};
+        }
+      `;
+    }
+
+    return '';
+  }}
+
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -342,27 +373,26 @@ const SearchListItem = styled(ListItem)<{isChild?: boolean; isGrouped?: boolean}
 `;
 
 const SearchItemTitleWrapper = styled('div')`
+  display: flex;
+  flex-grow: 1;
+  flex-shrink: 0;
+  max-width: 280px;
+
   color: ${p => p.theme.textColor};
   font-weight: normal;
   font-size: ${p => p.theme.fontSizeMedium};
   margin: 0;
   line-height: ${p => p.theme.text.lineHeightHeading};
 
-  display: flex;
-  flex-grow: 1;
-  flex-shrink: none;
-
-  max-width: 280px;
-
   ${p => p.theme.overflowEllipsis};
 `;
 
-const RestOfWords = styled('span')<{hasSplit?: boolean}>`
+const RestOfWords = styled('span')<{hasSplit?: boolean; isFirstWordHidden?: boolean}>`
   color: ${p => (p.hasSplit ? p.theme.blue400 : p.theme.textColor)};
+  margin-left: ${p => (p.isFirstWordHidden ? space(1) : '0px')};
 `;
 
-const FirstWordWrapper = styled('span')<{hide?: boolean}>`
-  opacity: ${p => (p.hide ? 0 : 1)};
+const FirstWordWrapper = styled('span')`
   font-weight: medium;
 `;
 
@@ -471,4 +501,13 @@ const QueryItemWrapper = styled('span')`
   white-space: nowrap;
   word-break: normal;
   font-family: ${p => p.theme.text.familyMono};
+`;
+
+const Value = styled('span')<{hasDocs?: boolean}>`
+  font-family: ${p => p.theme.text.familyMono};
+  font-size: ${p => p.theme.fontSizeSmall};
+
+  max-width: ${p => (p.hasDocs ? '280px' : 'none')};
+
+  ${p => p.theme.overflowEllipsis};
 `;

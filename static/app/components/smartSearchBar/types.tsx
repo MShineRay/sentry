@@ -37,7 +37,7 @@ export type SearchItem = {
   kind?: FieldValueKind;
   title?: string;
   type?: ItemType;
-  value?: string;
+  value?: string | null;
 };
 
 export type Tag = {
