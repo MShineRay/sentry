@@ -673,6 +673,7 @@ class SmartSearchBar extends Component<Props, State> {
             : isSelectingDropdownItems
             ? (nextActiveSearchItem + 1) % totalItems
             : 0;
+        // We want to skip any items without a value and not select them.
       } while (flatSearchItems[nextActiveSearchItem].value === null);
 
       const [nextGroupIndex, nextChildrenIndex] = filterSearchGroupsByIndex(
@@ -882,7 +883,7 @@ class SmartSearchBar extends Component<Props, State> {
   /**
    * Returns array of possible key values that substring match `query`
    */
-  getTagItems(query: string): [SearchItem[], ItemType] {
+  getTagKeys(query: string): [SearchItem[], ItemType] {
     const {prepareQuery, supportedTagType, getFieldDoc} = this.props;
 
     const supportedTags = this.props.supportedTags ?? {};
@@ -1133,7 +1134,7 @@ class SmartSearchBar extends Component<Props, State> {
   };
 
   async generateTagAutocompleteGroup(tagName: string): Promise<AutocompleteGroup> {
-    const [tagKeys, tagType] = this.getTagItems(tagName);
+    const [tagKeys, tagType] = this.getTagKeys(tagName);
     const recentSearches = await this.getRecentSearches();
 
     return {
@@ -1224,7 +1225,7 @@ class SmartSearchBar extends Component<Props, State> {
       // (e.g. if you delete a query, the last letter will be highlighted if `searchTerm`
       // does not get updated)
 
-      const [tagKeys, tagType] = this.getTagItems('');
+      const [tagKeys, tagType] = this.getTagKeys('');
       const recentSearches = await this.getRecentSearches();
 
       this.updateAutoCompleteState(tagKeys, recentSearches ?? [], '', tagType);

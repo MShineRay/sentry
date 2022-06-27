@@ -1122,6 +1122,13 @@ export function isNumericMetrics(field: string): boolean {
   ].includes(field);
 }
 
+export const ISSUES_DOCS: Readonly<Record<string, string>> = {
+  age: t('The age of the issue in relative time'),
+  apdex: t('Returns the apdex score based on a duration threshold'),
+  device: t('Descriptor details and version'),
+  'device.model_id': t('Internal hardware revision'),
+};
+
 export const FIELDS_DOCS: Readonly<Record<string, string>> = {
   has: t('check field exists'),
   'release.version': t('semantic version'),
@@ -1129,16 +1136,16 @@ export const FIELDS_DOCS: Readonly<Record<string, string>> = {
   'release.package': t('semantic package'),
   'release.build': t('semantic build number'),
   [FieldKey.CULPRIT]: t('deprecated'),
-  [FieldKey.DEVICE_ARCH]: t('cpu architecture'),
-  [FieldKey.DEVICE_FAMILY]: t('common part of name'),
-  [FieldKey.DEVICE_BATTERY_LEVEL]: t('0-100 of level'),
-  [FieldKey.DEVICE_BRAND]: t('brand of device'),
-  [FieldKey.DEVICE_CHARGING]: t('True or False'),
+  [FieldKey.DEVICE_ARCH]: t('CPU architecture'),
+  [FieldKey.DEVICE_BATTERY_LEVEL]: t('Indicator of how much battery is at'),
+  [FieldKey.DEVICE_BRAND]: t('Brand of device'),
+  [FieldKey.DEVICE_CHARGING]: t('Charging at the time of the event'),
+  [FieldKey.DEVICE_FAMILY]: t('Model name across generations'),
   [FieldKey.DEVICE_LOCALE]: t('deprecated'),
-  [FieldKey.DEVICE_NAME]: t('details of device'),
-  [FieldKey.DEVICE_ONLINE]: t('True or False'),
-  [FieldKey.DEVICE_ORIENTATION]: t('portrait or landscape'),
-  [FieldKey.DEVICE_SIMULATOR]: t('True or False'),
+  [FieldKey.DEVICE_NAME]: t('Descriptor details'),
+  [FieldKey.DEVICE_ONLINE]: t('Online at the time of the event'),
+  [FieldKey.DEVICE_ORIENTATION]: t('Portrait or landscape view '),
+  [FieldKey.DEVICE_SIMULATOR]: t('Determines if it occured on a simulator'),
   [FieldKey.DEVICE_UUID]: t('uuid'),
   [FieldKey.DIST]: t('build or variant'),
   [FieldKey.ENVIRONMENT]: t('deployment name'),
@@ -1210,7 +1217,9 @@ export const FIELDS_DOCS: Readonly<Record<string, string>> = {
   [WebVital.LCP]: t('largest contentful paint'),
   [WebVital.RequestTime]: t('time until response start'),
   [WebVital.TTFB]: t('time to first byte'),
+  ...ISSUES_DOCS,
 };
+
 export function getFieldDoc(field: string): React.ReactNode {
   if (FIELDS_DOCS.hasOwnProperty(field)) {
     return FIELDS_DOCS[field];
