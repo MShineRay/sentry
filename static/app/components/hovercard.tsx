@@ -56,16 +56,14 @@ function Hovercard({
   ...hoverOverlayProps
 }: HovercardProps): React.ReactElement {
   const theme = useTheme();
-  const {wrapTrigger, isOpen, arrowProps, overlayProps, placement} = useHoverOverlay(
-    'hovercard',
-    {
+  const {wrapTrigger, isOpen, overlayProps, placement, arrowData, arrowProps} =
+    useHoverOverlay('hovercard', {
       offset,
       displayTimeout,
       isHoverable: true,
       className: containerClassName,
       ...hoverOverlayProps,
-    }
-  );
+    });
 
   if (!body && !header) {
     return <Fragment>{children}</Fragment>;
@@ -74,7 +72,7 @@ function Hovercard({
   const hovercardContent = isOpen && (
     <PositionWrapper zIndex={theme.zIndex.hovercard} {...overlayProps}>
       <StyledHovercard
-        originPointCss={arrowProps.style}
+        originPoint={arrowData}
         placement={placement}
         className={classNames('hovercard', className)}
       >
@@ -82,7 +80,6 @@ function Hovercard({
         {body ? <Body className={bodyClassName}>{body}</Body> : null}
         <OverlayArrow
           size={16}
-          data-placement={placement}
           background={tipColor}
           border={tipBorderColor}
           {...arrowProps}
